@@ -36,7 +36,24 @@ func main() {
 
 	configureServer()
 
+	client := <-ch
+
 	schedulePlaylistCreation()
+
+	user, err := client.CurrentUser(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("You are logged in as:", user.ID)
+
+	tracks, err := client.CurrentUsersTopTracks(context.Background(), spotify.Timerange(spotify.ShortTermRange), spotify.Limit(30))
+	if err != nil {
+		log.Fatalf("Error fetching top tracks: %v", err)
+	}
+	for _, track := range tracks.Tracks {
+		fmt.Println(track.ID)
+	}
 
 }
 
@@ -74,6 +91,8 @@ func configureServer() {
 		}
 	}()
 
-}
+	url := auth.AuthURL(state)
 
-func 
+	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
+
+}
