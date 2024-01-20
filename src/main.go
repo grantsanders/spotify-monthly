@@ -22,8 +22,8 @@ var (
 func init() {
 
 	// these are for testing only
-	os.Setenv("SPOTIFY_ID", "d892b49996e1409cb64e9665ae2108e9")
-	os.Setenv("SPOTIFY_SECRET", "4255b0a88102430fb49349a5efa38957")
+	os.Setenv("SPOTIFY_ID", "ID")
+	os.Setenv("SPOTIFY_SECRET", "SECRET")
 
 	const redirectURI = "http://localhost:1000/callback"
 
