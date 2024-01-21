@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
@@ -27,12 +29,18 @@ func init() {
 
 	const redirectURI = "http://localhost:1000/callback"
 
-	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
+	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPublic, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
 	ch = make(chan *spotify.Client)
 	state = "the1"
 }
 
 func main() {
+
+	now := time.Now().AddDate(0, -1, 0)
+
+	formattedDate := strings.ToLower(now.Format("January '06"))
+
+	fmt.Println(formattedDate)
 
 	configureServer()
 
@@ -45,15 +53,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("You are logged in as:", user.ID)
+	fmt.Println("You are logged in as:", user.DisplayName)
 
 	tracks, err := client.CurrentUsersTopTracks(context.Background(), spotify.Timerange(spotify.ShortTermRange), spotify.Limit(30))
 	if err != nil {
 		log.Fatalf("Error fetching top tracks: %v", err)
 	}
+
+	trackIDs := make([]spotify.ID, 0, len(tracks.Tracks))
 	for _, track := range tracks.Tracks {
-		fmt.Println(track.ID)
+		trackIDs = append(trackIDs, track.ID)
 	}
+
+	playlist, err := client.CreatePlaylistForUser(context.Background(), user.ID, "My Top Tracks", "", false, false)
+	if err != nil {
+		log.Fatalf("Error creating playlist: %v", err)
+	}
+
+	_, err = client.AddTracksToPlaylist(context.Background(), playlist.ID, trackIDs...)
+	if err != nil {
+		log.Fatalf("Error adding tracks to playlist: %v", err)
+	}
+
+	log.Println("Playlist created successfully!")
 
 }
 
