@@ -6,7 +6,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
+	"github.com/robfig/cron/v3"
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
@@ -22,12 +25,12 @@ var (
 func init() {
 
 	// these are for testing only
-	os.Setenv("SPOTIFY_ID", "ID")
-	os.Setenv("SPOTIFY_SECRET", "SECRET")
+	os.Setenv("SPOTIFY_ID", "")
+	os.Setenv("SPOTIFY_SECRET", "")
 
 	const redirectURI = "http://localhost:1000/callback"
 
-	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
+	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPublic, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
 	ch = make(chan *spotify.Client)
 	state = "the1"
 }
@@ -36,24 +39,14 @@ func main() {
 
 	configureServer()
 
-	client := <-ch
-
-	schedulePlaylistCreation()
-
-	user, err := client.CurrentUser(context.Background())
+	client, err := authenticate()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("You are logged in as:", user.ID)
+	schedulePlaylistCreation(client)
 
-	tracks, err := client.CurrentUsersTopTracks(context.Background(), spotify.Timerange(spotify.ShortTermRange), spotify.Limit(30))
-	if err != nil {
-		log.Fatalf("Error fetching top tracks: %v", err)
-	}
-	for _, track := range tracks.Tracks {
-		fmt.Println(track.ID)
-	}
+	select {}
 
 }
 
@@ -69,12 +62,26 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	// use the token to get an authenticated client
 	client := spotify.New(auth.Client(r.Context(), tok))
+
 	fmt.Fprintf(w, "Login Completed!")
 	ch <- client
 }
 
-func schedulePlaylistCreation() {
+func schedulePlaylistCreation(client *spotify.Client) {
 
+	fmt.Println("Executing monthly job at:", time.Now().Format(time.RFC1123))
+
+	c := cron.New()
+	_, err := c.AddFunc("0 * * * *", func() {
+		fmt.Println("Creating playlist at %s", time.Now().Format(time.RFC1123))
+		createPlaylist(client)
+	})
+
+	if err != nil {
+		log.Fatalf("Error scheduling monthly job: %v", err)
+	}
+
+	c.Start()
 }
 
 func configureServer() {
@@ -91,8 +98,57 @@ func configureServer() {
 		}
 	}()
 
+}
+
+func authenticate() (*spotify.Client, error) {
+
 	url := auth.AuthURL(state)
 
 	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
 
+	client := <-ch
+
+	user, err := client.CurrentUser(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("You are logged in as:", user.DisplayName)
+
+	return client, nil
+
+}
+
+func createPlaylist(client *spotify.Client) {
+
+	now := time.Now().AddDate(0, -1, 0)
+
+	formattedDate := strings.ToLower(now.Format("January '06"))
+
+	user, err := client.CurrentUser(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tracks, err := client.CurrentUsersTopTracks(context.Background(), spotify.Timerange(spotify.ShortTermRange), spotify.Limit(30))
+	if err != nil {
+		log.Fatalf("Error fetching top tracks: %v", err)
+	}
+
+	trackIDs := make([]spotify.ID, 0, len(tracks.Tracks))
+	for _, track := range tracks.Tracks {
+		trackIDs = append(trackIDs, track.ID)
+	}
+
+	playlist, err := client.CreatePlaylistForUser(context.Background(), user.ID, formattedDate, "", false, false)
+	if err != nil {
+		log.Fatalf("Error creating playlist: %v", err)
+	}
+
+	_, err = client.AddTracksToPlaylist(context.Background(), playlist.ID, trackIDs...)
+	if err != nil {
+		log.Fatalf("Error adding tracks to playlist: %v", err)
+	}
+
+	log.Println("Playlist created successfully!")
 }
