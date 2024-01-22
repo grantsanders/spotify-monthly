@@ -14,8 +14,6 @@ import (
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
 )
 
-// const redirectURI = "localhost:1000/callback"
-
 var (
 	auth  *spotifyauth.Authenticator
 	ch    chan *spotify.Client
@@ -26,9 +24,9 @@ func init() {
 
 	// these are for testing only
 	os.Setenv("SPOTIFY_ID", "d892b49996e1409cb64e9665ae2108e9")
-	os.Setenv("SPOTIFY_SECRET", "fe230e1eb5624d7dbe0c29a5cbe3f4fa")
+	os.Setenv("SPOTIFY_SECRET", "")
 
-	const redirectURI = "http://localhost:1000/callback"
+	const redirectURI = "http://orb:1000/callback"
 
 	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPublic, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
 
