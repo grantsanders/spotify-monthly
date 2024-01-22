@@ -31,6 +31,7 @@ func init() {
 	const redirectURI = "http://localhost:1000/callback"
 
 	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPublic, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
+
 	ch = make(chan *spotify.Client)
 	state = "the1"
 }
@@ -67,13 +68,25 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	ch <- client
 }
 
+func refresh(client *spotify.Client) *spotify.Client {
+	token, err := client.Token()
+	if err != nil {
+		log.Fatalf("Failed to retrieve existing token")
+	}
+
+	newToken, err := auth.RefreshToken(context.Background(), token)
+	if err != nil {
+		log.Fatalf("Failed to refresh token")
+	}
+
+	return spotify.New(auth.Client(context.Background(), newToken))
+}
+
 func schedulePlaylistCreation(client *spotify.Client) {
 
-	fmt.Println("Executing monthly job at:", time.Now().Format(time.RFC1123))
-
 	c := cron.New()
-	_, err := c.AddFunc("0 * * * *", func() {
-		fmt.Println("Creating playlist at %s", time.Now().Format(time.RFC1123))
+	_, err := c.AddFunc("0 0 1 * *", func() {
+		fmt.Printf("Creating playlist at %s", time.Now().Format(time.RFC1123))
 		createPlaylist(client)
 	})
 
@@ -120,6 +133,8 @@ func authenticate() (*spotify.Client, error) {
 }
 
 func createPlaylist(client *spotify.Client) {
+
+	client = refresh(client)
 
 	now := time.Now().AddDate(0, -1, 0)
 
