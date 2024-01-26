@@ -21,11 +21,7 @@ var (
 )
 
 func init() {
-
-	// these are for testing only
-	os.Setenv("SPOTIFY_ID", "d892b49996e1409cb64e9665ae2108e9")
-	os.Setenv("SPOTIFY_SECRET", "")
-
+// need to set SPOTIFY_ID and SPOTIFY_SECRET variables in docker-compose
 	const redirectURI = "http://orb:1000/callback"
 
 	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPublic, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))

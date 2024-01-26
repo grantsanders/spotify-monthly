@@ -1,5 +1,5 @@
-# Start from the official Golang base image
-FROM golang:1.21.6-bullseye as builder
+# Start from the official Golang Alpine base image
+FROM golang:1.21.6-alpine as builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -17,8 +17,11 @@ COPY src/ .
 # Ensure main.go or the relevant entry point is at the root of the src directory
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
 
-# Start a new stage from scratch for a smaller, final image
-FROM scratch
+# Final stage: Use Alpine for the runtime image
+FROM alpine:latest
+
+# Install CA certificates
+RUN apk --no-cache add ca-certificates
 
 # Copy the binary from the builder stage
 COPY --from=builder /app/main .
