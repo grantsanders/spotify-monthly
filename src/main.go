@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -21,7 +20,8 @@ var (
 )
 
 func init() {
-// need to set SPOTIFY_ID and SPOTIFY_SECRET variables in docker-compose
+
+	// need to set SPOTIFY_ID and SPOTIFY_SECRET variables in docker-compose
 	const redirectURI = "http://orb:1000/callback"
 
 	auth = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate, spotifyauth.ScopePlaylistModifyPublic, spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopeUserTopRead, spotifyauth.ScopeUserLibraryModify))
@@ -41,6 +41,7 @@ func main() {
 
 	schedulePlaylistCreation(client)
 
+	configureManualPost(client)
 	select {}
 
 }
@@ -89,6 +90,23 @@ func schedulePlaylistCreation(client *spotify.Client) {
 	}
 
 	c.Start()
+}
+
+func configureManualPost(client *spotify.Client) {
+	http.HandleFunc("/ManualCreate", createPlaylistHandler(client))
+}
+
+func createPlaylistHandler(client *spotify.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		createPlaylist(client)
+		fmt.Fprintf(w, "Playlist created successfully")
+
+	}
 }
 
 func configureServer() {
