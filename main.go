@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"spotify-monthly/internal/auth"
 	scheduler "spotify-monthly/internal/cron"
 	"spotify-monthly/internal/http"
@@ -22,7 +23,11 @@ func main() {
 	client := <-clientChannel
 	playlist.ClientChannel <- client
 
-	scheduler.SchedulePlaylistCreation()
+	internalCron := os.Getenv("INTERNALCRON")
+	if internalCron == "true" {
+		// Schedule playlist creation
+		scheduler.SchedulePlaylistCreation()
+	}
 
 	select {}
 }
