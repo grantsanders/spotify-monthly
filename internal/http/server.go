@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"spotify-monthly/internal/auth"
 	"spotify-monthly/internal/playlist"
 
@@ -19,7 +20,13 @@ func ConfigureServer() {
 	})
 
 	go func() {
-		err := http.ListenAndServe(":1000", nil)
+
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "1000" // Default to port 8080 if PORT is not set
+			log.Printf("Defaulting to port %s", port)
+		}
+		err := http.ListenAndServe(":"+port, nil)
 		if err != nil {
 			log.Fatal(err)
 		}
