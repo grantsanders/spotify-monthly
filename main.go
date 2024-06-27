@@ -14,7 +14,7 @@ func main() {
 
 	var url = os.Getenv("BASEURL")
 
-	auth.Setup(url+":1000/callback", "the1")
+	auth.Setup(url+"/callback", "the1")
 
 	clientChannel := make(chan *spotify.Client)
 
