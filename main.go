@@ -12,7 +12,9 @@ import (
 
 func main() {
 
-	auth.Setup("http://orb:1000/callback", "the1")
+	var url = os.Getenv("BASEURL")
+
+	auth.Setup(url+":1000/callback", "the1")
 
 	clientChannel := make(chan *spotify.Client)
 
@@ -23,7 +25,7 @@ func main() {
 	client := <-clientChannel
 	playlist.ClientChannel <- client
 
-	internalCron := os.Getenv("INTERNALCRON")
+	internalCron := os.Getenv("internalCron")
 	if internalCron == "true" {
 		// Schedule playlist creation
 		scheduler.SchedulePlaylistCreation()
