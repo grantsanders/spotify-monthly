@@ -8,6 +8,7 @@ import (
 	"os"
 	"spotify-monthly/internal/auth"
 	"spotify-monthly/internal/playlist"
+	"spotify-monthly/internal/storage"
 
 	"github.com/zmb3/spotify/v2"
 )
@@ -20,7 +21,6 @@ func ConfigureServer() {
 	})
 
 	go func() {
-
 		port := os.Getenv("PORT")
 		if port == "" {
 			port = "1000" // Default to port 8080 if PORT is not set
@@ -41,6 +41,9 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
 		log.Fatal(err)
 	}
+
+	storage.StoreNewToken(tok)
+
 	if st := r.FormValue("state"); st != state {
 		http.NotFound(w, r)
 		log.Fatalf("State mismatch: %s != %s\n", st, state)
@@ -49,7 +52,7 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 	client := spotify.New(auth.Authenticator.Client(context.Background(), tok))
 
 	fmt.Fprintf(w, "Login Completed!")
-	auth.ClientChannel <- client
+	playlist.ClientChannel <- client
 }
 
 func createPlaylistHandler() http.HandlerFunc {

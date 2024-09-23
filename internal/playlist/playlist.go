@@ -2,8 +2,10 @@ package playlist
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"spotify-monthly/internal/auth"
+	"spotify-monthly/internal/storage"
 	"strings"
 	"time"
 
@@ -16,9 +18,21 @@ var (
 
 func CreatePlaylist() {
 
-	client := <-ClientChannel
+	client, err := auth.GetTokenFromDB()
+	if err != nil {
+		fmt.Println("Couldn't retrieve client from token stored in DB, waiting for login")
+		client = <-ClientChannel
+	}
 
-	client = useRefreshToken(client)
+	token, err := client.Token()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	err = storage.StoreNewToken(token)
+	if err != nil {
+		log.Fatalf("couldn't store new token")
+	}
 
 	now := time.Now().AddDate(0, -1, 0)
 
