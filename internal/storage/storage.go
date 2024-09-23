@@ -9,7 +9,7 @@ import (
 )
 
 func openDBConnection() (*sql.DB, error) {
-	connStr := "***REMOVED***"
+	connStr := ""
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
