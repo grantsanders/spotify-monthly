@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"spotify-monthly/internal/storage"
+	"time"
 
 	"github.com/zmb3/spotify/v2"
 	spotifyauth "github.com/zmb3/spotify/v2/auth"
+	"golang.org/x/oauth2"
 )
 
 var (
@@ -24,6 +27,8 @@ func Setup(redirectUrl string, stateVal string) {
 			spotifyauth.ScopePlaylistModifyPrivate,
 			spotifyauth.ScopeUserTopRead,
 			spotifyauth.ScopeUserLibraryModify))
+
+	fmt.Println(redirectUrl)
 }
 
 func GetClient(clientChannel chan *spotify.Client) {
@@ -48,16 +53,26 @@ func GetState() string {
 	return state
 }
 
-func UseRefreshToken(client *spotify.Client) *spotify.Client {
-	token, err := client.Token()
+func GetTokenFromDB() (*spotify.Client, error) {
+
+	token := &oauth2.Token{
+		AccessToken:  "",
+		TokenType:    "",
+		RefreshToken: "",
+		Expiry:       time.Now().Add(1 * time.Hour),
+	}
+
+	token, err := storage.RetrieveLastToken(token)
 	if err != nil {
 		log.Println(err.Error())
+		return nil, err
 	}
 
 	newToken, err := Authenticator.RefreshToken(context.Background(), token)
 	if err != nil {
-		log.Fatalf("Failed to refresh token")
+		fmt.Println("Failed to refresh token")
+		return nil, err
 	}
 
-	return spotify.New(Authenticator.Client(context.Background(), newToken))
+	return spotify.New(Authenticator.Client(context.Background(), newToken)), nil
 }
