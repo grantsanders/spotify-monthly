@@ -3,13 +3,14 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/lib/pq"
 	"golang.org/x/oauth2"
 )
 
 func openDBConnection() (*sql.DB, error) {
-	connStr := ""
+	connStr := os.Getenv("NEON")
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		return nil, err
